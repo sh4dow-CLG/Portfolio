@@ -1,0 +1,22 @@
+# build output
+dist/
+
+# generated types
+.astro/
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+
+# environment files
+.env
+.env.*
+!.env.example
+
+# system and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
