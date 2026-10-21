@@ -46,6 +46,7 @@
 
   html {
     color-scheme: light dark;
+    scrollbar-width: none;
   }
 
   body {
@@ -54,6 +55,25 @@
   }
 }
 
+/* POCZĄTEK: karuzela — brak pasków, scroll strony nadal działa. */
+html::-webkit-scrollbar,
+.project-viewport::-webkit-scrollbar {
+  display: none;
+}
+
+.project-viewport {
+  scrollbar-width: none;
+}
+
+/* Bez JS pozostaje natywny scroll poziomy. Po inicjalizacji przesuwamy cały rząd. */
+.project-section[data-scroll-enhanced] .project-viewport {
+  overflow: hidden;
+}
+
+.project-section[data-scroll-enhanced] [data-project-track] {
+  will-change: transform;
+}
+/* KONIEC: karuzela */
 
 .hero-shade {
   background: linear-gradient(

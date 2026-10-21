@@ -44,6 +44,7 @@ const {
       import Lenis from 'lenis';
       import { gsap } from 'gsap';
       import { ScrollTrigger } from 'gsap/ScrollTrigger';
+      import { initProjectScroll } from '../scripts/project-scroll';
 
       gsap.registerPlugin(ScrollTrigger);
 
@@ -61,6 +62,8 @@ const {
         const lenis = new Lenis({
           autoRaf: false,
           smoothWheel: true,
+          // Kółko i poziomy gest touchpada sterują tym samym postępem strony.
+          gestureOrientation: 'both',
           // Ten sam przełącznik dla Lenisa i pozostałych animacji.
           respectReducedMotion,
           // Szybsza reakcja na kółko, bez długiego doganiania pozycji.
@@ -123,6 +126,10 @@ const {
           );
         }
 
+        // POCZĄTEK: karuzela projektów — korzysta z istniejącego Lenisa.
+        const cleanupProjectScroll = initProjectScroll(lenis);
+        // KONIEC: karuzela projektów
+
         // ==========================================
         // LETTER MAGNET — SOFT SNAP
         // ==========================================
@@ -132,10 +139,16 @@ const {
             '.header-item'
           );
 
-        const magnetRadius = 85;
+        // POCZĄTEK: skala efektu — 0.25 odtwarza odległości przy zoomie 25%.
+        // 1 = poprzedni efekt przy 100%; rozmiar samego tekstu pozostaje bez zmian.
+        const magnetVisualScale = 0.25;
+        const magnetRadius = 85 * magnetVisualScale;
         const magnetStrength = 0.42;
-        const snapStep = 2;
+        const snapStep = 2 * magnetVisualScale;
+        const magnetLift = 4 * magnetVisualScale;
+        // Zoom nie zmienia proporcji powiększenia ani czasu animacji.
         const maxScale = 0.09;
+        // KONIEC: skala efektu
 
         const magnetCleanups: Array<() => void> = [];
 
@@ -306,13 +319,13 @@ const {
                 );
 
                 const y = snap(
-                  (dy * 0.3 - 4) * influence,
+                  (dy * 0.3 - magnetLift) * influence,
                   snapStep
                 );
 
-                // Delikatne przekręcenie litery
+                // Kąt jak przy zoomie 25% — obrót nie jest odległością w pikselach.
                 const rotation = Math.round(
-                  dx * 0.075 * influence
+                  (dx / magnetVisualScale) * 0.075 * influence
                 );
 
                 // Powiększanie zależne od odległości
@@ -420,6 +433,8 @@ const {
         if (import.meta.hot) {
           import.meta.hot.dispose(() => {
             active = false;
+
+            cleanupProjectScroll();
 
             magnetCleanups.forEach((cleanup) => {
               cleanup();

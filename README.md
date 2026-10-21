@@ -15,6 +15,24 @@ Pozostałe komendy:
 - `npm run build` — sprawdza projekt i tworzy statyczny build,
 - `npm run preview` — uruchamia podgląd produkcyjnego buildu.
 
+## GitHub Pages
+
+Adres strony: https://sh4dow-clg.github.io/Portfolio/
+
+Workflow `.github/workflows/deploy.yml` po każdym pushu do `main` instaluje zależności, sprawdza Astro i TypeScript, buduje stronę i publikuje ją na GitHub Pages. Można go też uruchomić ręcznie w zakładce Actions.
+
+W GitHub Actions konfiguracja Astro używa `base: '/Portfolio'`, żeby ścieżki do obrazów, fontów i skryptów działały pod adresem repozytorium. Lokalny dev server nadal działa w `/`.
+
+Aby lokalnie sprawdzić dokładnie build przeznaczony na Pages w PowerShell:
+
+```powershell
+$env:GITHUB_ACTIONS = 'true'
+npm run build
+npm run preview
+# Podgląd otwórz pod /Portfolio/. Po zatrzymaniu preview:
+Remove-Item Env:GITHUB_ACTIONS
+```
+
 ## Struktura
 
 ```text

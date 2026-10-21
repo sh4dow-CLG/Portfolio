@@ -8,18 +8,23 @@ const boxes = Array.from({ length: 16 }, (_, index) => index + 1);
 <section
   id="Projects"
   aria-label="Projekty"
-  class="flex min-h-svh items-center bg-[#141414] py-16"
+  class="project-section flex min-h-svh items-center bg-[#141414] py-16"
 >
-  <!-- POCZĄTEK: obszar przewijany poziomo na małych ekranach -->
+  <!-- POCZĄTEK: okno galerii — pasek jest ukryty, ruchem steruje scroll strony -->
   <div
     role="region"
     aria-label="Przewijana galeria projektów"
     tabindex="0"
-    data-lenis-prevent-horizontal
-    class="w-full overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-200"
+    data-project-viewport
+    aria-describedby="project-scroll-help"
+    class="project-viewport w-full overflow-x-auto focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-200"
   >
+    <p id="project-scroll-help" class="sr-only">
+      Przewijaj stronę, aby przesuwać boksy. Po ustawieniu fokusu możesz też używać
+      strzałek w lewo i w prawo oraz klawiszy Home i End.
+    </p>
     <!-- POCZĄTEK: jeden rząd boksów -->
-    <div class="mx-auto flex w-max min-w-full justify-center gap-3 px-6 py-4 sm:gap-4 sm:px-12">
+    <div data-project-track class="mx-auto flex w-max min-w-full justify-center gap-3 px-6 py-4 sm:gap-4 sm:px-12">
       {boxes.map((number) => (
         <div
           data-project-box={number}
@@ -33,11 +38,3 @@ const boxes = Array.from({ length: 16 }, (_, index) => index + 1);
   <!-- KONIEC: obszar przewijany -->
 </section>
 <!-- KONIEC: sekcja pod zdjęciem -->
-
-<style>
-  /* Pionowy gest może przewijać stronę także nad poziomą galerią.
-     Nadpisujemy blokadę obu osi z domyślnego arkusza Lenisa. */
-  :global(.lenis) [data-lenis-prevent-horizontal] {
-    overscroll-behavior-y: auto;
-  }
-</style>

@@ -1,6 +1,6 @@
 # Puste boksy — baza przyszłej karuzeli
 
-Ten etap to szesnaście pustych, pionowych boksów na ciemnym tle, pod pierwszym ekranem. Rząd przewija się poziomo także na typowym ekranie komputera, żeby łatwo testować scroll. Rozwijanie kart, zdjęcia, tytuły i animacje WebGL dodamy później.
+Ten etap to szesnaście pustych, pionowych boksów na ciemnym tle, pod pierwszym ekranem. Po dojściu do sekcji dalszy scroll myszki przesuwa rząd poziomo, także gdy kursor znajduje się nad pustym tłem. Paski przewijania są ukryte. Rozwijanie kart, zdjęcia, tytuły i animacje WebGL dodamy później.
 
 Gotowy kod znajduje się w `src/components/ProjectBoxes.astro`. Poniższe kroki wyjaśniają jego budowę — komponent jest już podłączony, więc nie dodawaj go drugi raz.
 
@@ -32,7 +32,7 @@ Wynik to tablica liczb od 1 do 16. W SSG ten kod wykonuje się przy generowaniu 
 <section
   id="Projects"
   aria-label="Projekty"
-  class="flex min-h-svh items-center bg-[#141414] py-16"
+  class="project-section flex min-h-svh items-center bg-[#141414] py-16"
 >
   <!-- Tutaj będzie galeria. -->
 </section>
@@ -54,8 +54,8 @@ Wewnątrz sekcji dodaj:
   role="region"
   aria-label="Przewijana galeria projektów"
   tabindex="0"
-  data-lenis-prevent-horizontal
-  class="w-full overflow-x-auto"
+  data-project-viewport
+  class="project-viewport w-full overflow-x-auto"
 >
   <!-- Tutaj będzie rząd boksów. -->
 </div>
@@ -64,19 +64,19 @@ Wewnątrz sekcji dodaj:
 - `w-full` — obszar zajmuje dostępną szerokość.
 - `overflow-x-auto` — pozwala przewijać w poziomie, gdy boksy nie mieszczą się w oknie.
 - `tabindex="0"` — umożliwia wejście do obszaru klawiszem Tab i przewijanie klawiaturą.
-- `data-lenis-prevent-horizontal` — pozostawia poziome gesty przeglądarce; pionowe przewijanie strony nadal wygładza Lenis.
+- `data-project-viewport` — pozwala skryptowi znaleźć okno galerii.
 - W gotowym pliku są też klasy `focus-visible:*`, które pokazują obrys podczas obsługi klawiaturą.
 
-Na końcu komponentu jest mały blok `<style>` z `overscroll-behavior-y: auto`. Arkusz Lenisa domyślnie blokuje przekazywanie scrolla w obu osiach przy atrybutach `data-lenis-prevent-*`; nadpisujemy blokadę pionową, żeby galeria nie zatrzymywała przewijania strony, także na dotyku.
+W `src/styles/global.css` klasy `project-section` i `project-viewport` odpowiadają za ukrycie paska. `scrollbar-width: none` oraz `::-webkit-scrollbar` chowają sam pasek. Po inicjalizacji skrypt ustawia `data-scroll-enhanced`, a CSS zmienia `overflow` na `hidden`: przesuwamy wtedy cały rząd przez transformację. Bez JS pozostaje natywne przewijanie poziome.
 
-To natywny poziomy scroll, np. gestem na touchpadzie lub telefonie. Nie zamieniamy jeszcze pionowego kółka myszy w poziomą karuzelę i nie dodajemy przeciągania myszą.
+Nie dodawaj tutaj `data-lenis-prevent` — przerwałoby wygładzanie scrolla nad boksami. Mechanizm opisany w kroku 10 korzysta z jednego Lenisa dla całej strony.
 
 ## 5. Ułóż boksy w jednym rzędzie
 
 W obszarze przewijania:
 
 ```astro
-<div class="mx-auto flex w-max min-w-full justify-center gap-3 px-6 py-4 sm:gap-4 sm:px-12">
+<div data-project-track class="mx-auto flex w-max min-w-full justify-center gap-3 px-6 py-4 sm:gap-4 sm:px-12">
   <!-- Tutaj wygenerujemy boksy. -->
 </div>
 ```
@@ -152,13 +152,44 @@ Przykładowo, żeby uzyskać szersze karty, zamień całą klasę szerokości na
 npm run dev
 ```
 
-Przewiń poniżej zdjęcia. Zwęź okno i sprawdź, czy przewija się sam rząd, a nie cała strona w poziomie.
+Przewiń poniżej zdjęcia. Kręć kółkiem także nad pustym tłem: sekcja pozostaje na ekranie, a boksy jadą w bok. Cofnij rząd do początku i kontynuuj scroll w górę — wrócisz do hero. Po ustawieniu fokusu w galerii sprawdź też strzałki lewo/prawo oraz Home/End.
 
 ```bash
 npm run build
 ```
 
 W tym projekcie build uruchamia także sprawdzenie Astro i TypeScript.
+
+## 10. Płynny ruch poziomy bez paska
+
+Pełny kod: `src/scripts/project-scroll.ts`. Layout wywołuje `initProjectScroll(lenis)` i przekazuje istniejącą instancję Lenisa; nie tworzymy drugiej pętli animacji.
+
+1. **Zmierz drogę.** `track.scrollWidth - viewport.clientWidth` mówi, o ile trzeba przesunąć rząd, aby pokazać jego koniec.
+2. **Zatrzymaj sekcję.** `pin: true` utrzymuje sekcję na ekranie od momentu `start: 'top top'`.
+3. **Zarezerwuj scroll.** `end: () => '+=' + distance` wyznacza odcinek pionowego scrolla przeznaczony na poziomy ruch. `pinSpacing: true` tworzy potrzebne miejsce w dokumencie.
+4. **Przesuń rząd.** `x: () => -distance` przesuwa go w lewo. Scroll wstecz automatycznie cofa tę samą animację.
+5. **Połącz z Lenisem.** `scrub: true` oraz `ease: 'none'` odwzorowują już wygładzony scroll. Nie dodajemy drugiej bezwładności na samych boksach.
+6. **Obsłuż zmianę rozmiaru.** `invalidateOnRefresh: true` ponownie oblicza drogę po zmianie szerokości okna. `lenis.resize()` aktualizuje długość strony po dodaniu pina.
+7. **Posprzątaj.** `context.revert()` usuwa animację, pin i jego odstęp podczas przeładowania kodu; osobno odpinamy listener klawiatury.
+
+Skrócony fragment mechanizmu, już zawarty w projekcie:
+
+```ts
+gsap.to(track, {
+  x: () => -getDistance(),
+  ease: 'none',
+  scrollTrigger: {
+    trigger: section,
+    start: 'top top',
+    end: () => `+=${Math.max(1, getDistance())}`,
+    pin: true,
+    scrub: true,
+    invalidateOnRefresh: true,
+  },
+});
+```
+
+`gestureOrientation: 'both'` w Lenisie pozwala sterować postępem zarówno kółkiem, jak i poziomym gestem touchpada. Na dotyku pionowy gest przewija stronę i tym samym przesuwa galerię. Kursor nie musi znajdować się nad kartą. Przed sekcją i po zakończeniu jej odcinka strona przewija się normalnie pionowo.
 
 Kolejny etap to wybranie aktywnego boksu i płynna zmiana jego szerokości. Potem dodamy materiały projektów, animacje kolorów i dopiero deformację WebGL.
 
