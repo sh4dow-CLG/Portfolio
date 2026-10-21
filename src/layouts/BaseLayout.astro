@@ -1,14 +1,18 @@
+
 ---
 import '../styles/global.css';
+import 'lenis/dist/lenis.css';
 
 interface Props {
   title: string;
   description?: string;
+  fontPreload?: string;
 }
 
 const {
   title,
   description = 'Personal portfolio',
+  fontPreload,
 } = Astro.props;
 ---
 
@@ -19,9 +23,417 @@ const {
     <meta name="viewport" content="width=device-width" />
     <meta name="description" content={description} />
     <meta name="generator" content={Astro.generator} />
+
+    {fontPreload && (
+      <link
+        rel="preload"
+        href={fontPreload}
+        as="font"
+        type="font/woff2"
+        crossorigin
+      />
+    )}
+
     <title>{title}</title>
   </head>
+
   <body class="bg-white text-zinc-950 antialiased dark:bg-zinc-950 dark:text-zinc-50">
     <slot />
+
+    <script>
+      import Lenis from 'lenis';
+      import { gsap } from 'gsap';
+      import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+      gsap.registerPlugin(ScrollTrigger);
+
+      const respectReducedMotion = false;
+
+      const reducedMotion = window.matchMedia(
+        '(prefers-reduced-motion: reduce)'
+      ).matches;
+
+      if (!respectReducedMotion || !reducedMotion) {
+        // ==========================================
+        // LENIS + GSAP
+        // ==========================================
+
+        const lenis = new Lenis({
+          autoRaf: false,
+          smoothWheel: true,
+          // Ten sam przełącznik dla Lenisa i pozostałych animacji.
+          respectReducedMotion,
+          // Szybsza reakcja na kółko, bez długiego doganiania pozycji.
+          lerp: 0.1,
+        });
+
+        lenis.on('scroll', ScrollTrigger.update);
+
+        // Jeden wspólny zegar dla Lenisa i GSAP
+        const tick = (time: number) => {
+          lenis.raf(time * 1000);
+        };
+
+        gsap.ticker.add(tick);
+        gsap.ticker.lagSmoothing(0);
+
+        // ==========================================
+        // HERO SCROLL ANIMATION
+        // ==========================================
+
+        const hero = document.querySelector('#hero');
+        const leftTitle = document.querySelector('#hero-left');
+        const rightTitle = document.querySelector('#hero-right');
+
+        const animation =
+          hero && leftTitle && rightTitle
+            ? gsap.timeline({
+                defaults: {
+                  ease: 'none',
+                  duration: 1,
+                },
+                scrollTrigger: {
+                  trigger: hero,
+                  start: 'top top',
+                  end: 'bottom top',
+                  scrub: true,
+                },
+              })
+            : undefined;
+
+        // Left animation
+        if (animation && leftTitle) {
+          animation.to(
+            leftTitle,
+            {
+              x: -1700,
+            },
+            0
+          );
+        }
+
+        // Right animation
+        if (animation && rightTitle) {
+          animation.to(
+            rightTitle,
+            {
+              x: 1700,
+            },
+            0
+          );
+        }
+
+        // ==========================================
+        // LETTER MAGNET — SOFT SNAP
+        // ==========================================
+
+        const headerItems =
+          document.querySelectorAll<HTMLElement>(
+            '.header-item'
+          );
+
+        const magnetRadius = 85;
+        const magnetStrength = 0.42;
+        const snapStep = 2;
+        const maxScale = 0.09;
+
+        const magnetCleanups: Array<() => void> = [];
+
+        const snap = (value: number, step: number) => {
+          return Math.round(value / step) * step;
+        };
+
+        // Zamiana tekstu na pojedyncze litery
+        const splitIntoChars = (
+          item: HTMLElement
+        ): HTMLElement[] => {
+          const existing =
+            item.querySelectorAll<HTMLElement>(
+              '.header-char'
+            );
+
+          if (existing.length) {
+            return Array.from(existing);
+          }
+
+          const walker = document.createTreeWalker(
+            item,
+            NodeFilter.SHOW_TEXT,
+            {
+              acceptNode(node) {
+                if (!node.textContent?.trim()) {
+                  return NodeFilter.FILTER_REJECT;
+                }
+
+                if (
+                  node.parentElement?.closest(
+                    'svg, script, style, .header-text, [data-no-magnet]'
+                  )
+                ) {
+                  return NodeFilter.FILTER_REJECT;
+                }
+
+                return NodeFilter.FILTER_ACCEPT;
+              },
+            }
+          );
+
+          const textNodes: Text[] = [];
+
+          while (walker.nextNode()) {
+            textNodes.push(
+              walker.currentNode as Text
+            );
+          }
+
+          const letters: HTMLElement[] = [];
+
+          textNodes.forEach((node) => {
+            const text = (
+              node.textContent ?? ''
+            ).replace(/\s+/g, ' ');
+
+            const wrapper =
+              document.createElement('span');
+
+            wrapper.className = 'header-text';
+
+            // Tekst dostępny dla czytników ekranu
+            const accessible =
+              document.createElement('span');
+
+            accessible.className = 'sr-only';
+            accessible.textContent = text;
+
+            wrapper.appendChild(accessible);
+
+            Array.from(text).forEach((character) => {
+              const letter =
+                document.createElement('span');
+
+              letter.className = 'header-char';
+              letter.textContent = character;
+
+              letter.setAttribute(
+                'aria-hidden',
+                'true'
+              );
+
+              wrapper.appendChild(letter);
+
+              if (!/\s/.test(character)) {
+                letters.push(letter);
+              }
+            });
+
+            node.replaceWith(wrapper);
+          });
+
+          return letters;
+        };
+
+        // Efekt tylko dla urządzeń z kursorem
+        const enableMagnet =
+          (!respectReducedMotion || !reducedMotion) &&
+          window.matchMedia(
+            '(hover: hover) and (pointer: fine)'
+          ).matches;
+
+        if (enableMagnet) {
+          headerItems.forEach((item) => {
+            const letters = splitIntoChars(item);
+
+            if (!letters.length) return;
+            // CSS używa tej samej decyzji o ruchu co Lenis i GSAP.
+            item.dataset.magnetEnabled = 'true';
+
+            let mouseX = 0;
+            let mouseY = 0;
+            let frame = 0;
+
+            // ======================================
+            // UPDATE MAGNET
+            // ======================================
+
+            const updateMagnet = () => {
+              frame = 0;
+
+              const bounds =
+                item.getBoundingClientRect();
+
+              const pointerX =
+                mouseX - bounds.left;
+
+              const pointerY =
+                mouseY - bounds.top;
+
+              letters.forEach((letter) => {
+                // Pozycja litery bez wpływu transform
+                const centerX =
+                  letter.offsetLeft +
+                  letter.offsetWidth / 2;
+
+                const centerY =
+                  letter.offsetTop +
+                  letter.offsetHeight / 2;
+
+                const dx = pointerX - centerX;
+                const dy = pointerY - centerY;
+
+                const distance = Math.hypot(
+                  dx,
+                  dy
+                );
+
+                // Im bliżej kursora, tym mocniejszy efekt
+                const proximity = Math.max(
+                  0,
+                  1 - distance / magnetRadius
+                );
+
+                // Gradient wpływu między literami
+                const influence =
+                  proximity *
+                  proximity *
+                  (3 - 2 * proximity);
+
+                // Snap pozycji
+                const x = snap(
+                  dx *
+                    magnetStrength *
+                    influence,
+                  snapStep
+                );
+
+                const y = snap(
+                  (dy * 0.3 - 4) * influence,
+                  snapStep
+                );
+
+                // Delikatne przekręcenie litery
+                const rotation = Math.round(
+                  dx * 0.075 * influence
+                );
+
+                // Powiększanie zależne od odległości
+                const scale =
+                  1 +
+                  Math.round(influence * 6) *
+                    (maxScale / 6);
+
+                letter.style.transform = `
+                  translate3d(${x}px, ${y}px, 0)
+                  rotate(${rotation}deg)
+                  scale(${scale})
+                `;
+              });
+            };
+
+            // ======================================
+            // POINTER MOVE
+            // ======================================
+
+            const onPointerMove = (
+              event: PointerEvent
+            ) => {
+              mouseX = event.clientX;
+              mouseY = event.clientY;
+
+              if (!frame) {
+                frame = requestAnimationFrame(
+                  updateMagnet
+                );
+              }
+            };
+
+            // ======================================
+            // RESET
+            // ======================================
+
+            const resetMagnet = () => {
+              if (frame) {
+                cancelAnimationFrame(frame);
+                frame = 0;
+              }
+
+              letters.forEach((letter) => {
+                letter.style.removeProperty(
+                  'transform'
+                );
+              });
+            };
+
+            item.addEventListener(
+              'pointermove',
+              onPointerMove
+            );
+
+            item.addEventListener(
+              'pointerleave',
+              resetMagnet
+            );
+
+            item.addEventListener(
+              'pointercancel',
+              resetMagnet
+            );
+
+            // Cleanup dla HMR
+            magnetCleanups.push(() => {
+              item.removeEventListener(
+                'pointermove',
+                onPointerMove
+              );
+
+              item.removeEventListener(
+                'pointerleave',
+                resetMagnet
+              );
+
+              item.removeEventListener(
+                'pointercancel',
+                resetMagnet
+              );
+
+              resetMagnet();
+              delete item.dataset.magnetEnabled;
+            });
+          });
+        }
+
+        // ==========================================
+        // FONT REFRESH
+        // ==========================================
+
+        let active = true;
+
+        void document.fonts.ready.then(() => {
+          if (active) {
+            ScrollTrigger.refresh();
+          }
+        });
+
+        // ==========================================
+        // HMR CLEANUP
+        // ==========================================
+
+        if (import.meta.hot) {
+          import.meta.hot.dispose(() => {
+            active = false;
+
+            magnetCleanups.forEach((cleanup) => {
+              cleanup();
+            });
+
+            animation?.scrollTrigger?.kill();
+            animation?.revert();
+
+            gsap.ticker.remove(tick);
+
+            lenis.destroy();
+          });
+        }
+      }
+    </script>
   </body>
 </html>

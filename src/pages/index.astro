@@ -1,9 +1,49 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import ProjectBoxes from '../components/ProjectBoxes.astro';
+import { Image } from 'astro:assets';
+import background from '../assets/background.jpg';
+import boskaFont from '../assets/fonts/Boska-Variable.woff2?url';
+
 ---
 
-<BaseLayout title="Portfolio">
-  <main class="mx-auto flex min-h-screen max-w-5xl items-center px-6 py-16">
-    <h1 class="text-4xl font-semibold tracking-tight sm:text-6xl">Portfolio</h1>
+<BaseLayout title="Portfolio" fontPreload={boskaFont}>
+  <main>
+    <section id="hero" class="relative min-h-svh overflow-hidden bg-indigo-100">
+      <!-- Warstwa nad zdjęciem pozwala napisom odbierać ruch kursora. -->
+      <div id="header" class="relative z-20 flex items-end justify-between ml-[5vw] mr-[5vw]">
+        <h2 class="header-item z-10 font-sentient text-[4vh] text-indigo-100">O mnie</h2>
+        <h2 class="header-item z-10 font-sentient text-[4vh] text-indigo-100">Kontakt</h2>
+        <h2 class="header-item z-10 font-sentient text-[4vh] text-indigo-100">Projekty</h2>
+      </div>
+      <Image
+        src={background}
+        alt=""
+        width={1920}
+        widths={[640, 960, 1280, 1920, 2560]}
+        sizes="(max-aspect-ratio: 3/2) 150svh, 100vw"
+        format="webp"
+        quality={75}
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
+        class="absolute inset-0 h-full w-full object-cover"
+      />
+      <!-- Dekoracyjna warstwa nie przechwytuje kliknięć ani ruchu kursora. -->
+      <div aria-hidden="true" class="hero-shade pointer-events-none absolute inset-0"></div>
+      <div class="pointer-events-none absolute inset-0 flex items-end">
+        <h1
+          id="hero-title"
+          class="absolute inset-x-0 bottom-0 z-10 flex w-full items-end justify-between gap-3
+                 px-[clamp(1.5rem,2.5vw,3rem)] pb-2
+                 font-boska text-[9.3vw] leading-none
+                 font-[550] text-indigo-100 origin-bottom md:scale-y-[1.2]"
+        >
+          <span id="hero-left" class="inline-block">Franciszek</span>
+          <span id="hero-right" class="inline-block">Wawrzeń</span>
+        </h1>
+      </div>
+    </section>
+    <ProjectBoxes />
   </main>
 </BaseLayout>

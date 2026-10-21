@@ -1,5 +1,42 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Supreme";
+  src: url("../assets/fonts/Supreme-Variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Sentient";
+  src: url("../assets/fonts/Sentient-Variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 200 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Crimson Pro";
+  src: url("../assets/fonts/CrimsonPro-Variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Boska";
+  src: url("../assets/fonts/Boska-Variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+}
+
+@theme {
+  --font-sentient: "Sentient", serif;
+  --font-crimson: "Crimson Pro", serif;
+  --font-supreme: "Supreme", sans-serif;
+  --font-boska: "Boska", serif;
+}
 @layer base {
   *,
   *::before,
@@ -14,5 +51,49 @@
   body {
     margin: 0;
     min-width: 320px;
+  }
+}
+
+
+.hero-shade {
+  background: linear-gradient(
+    180deg,
+    rgb(8 18 31 / 28%) 0%,
+    rgb(8 18 31 / 5%) 35%,
+    rgb(8 18 31 / 12%) 60%,
+    rgb(8 18 31 / 72%) 100%
+  );
+}
+
+.header-item {
+  position: relative;
+}
+
+/* Kontener tekstu — zachowuje układ całego słowa */
+.header-text {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* Każda litera porusza się niezależnie */
+.header-char {
+  display: inline-block;
+  white-space: pre;
+  pointer-events: none;
+  transform-origin: center 65%;
+  transition: transform 190ms cubic-bezier(0.22, 1.55, 0.36, 1);
+  will-change: transform;
+}
+
+/* Sprężysty powrót */
+.header-item:not(:hover) .header-char {
+  transition-duration: 390ms;
+}
+
+/* Dostępność */
+@media (prefers-reduced-motion: reduce) {
+  .header-item:not([data-magnet-enabled="true"]) .header-char {
+    transition: none;
+    will-change: auto;
   }
 }
